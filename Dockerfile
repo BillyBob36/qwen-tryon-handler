@@ -20,12 +20,12 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
     torch>=2.0.0 \
-    diffusers>=0.25.0 \
     transformers>=4.35.0 \
     accelerate>=0.25.0 \
     pillow>=10.0.0 \
     runpod>=1.6.0 \
-    safetensors>=0.4.0
+    safetensors>=0.4.0 && \
+    pip install --no-cache-dir git+https://github.com/huggingface/diffusers
 
 # Créer le répertoire de travail
 WORKDIR /app

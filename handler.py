@@ -4,7 +4,7 @@ Handler RunPod pour Virtual Try-On avec Qwen-Image-Edit-2509
 
 import runpod
 import torch
-from diffusers import AutoPipelineForImage2Image
+from diffusers import QwenImageEditPlusPipeline
 from PIL import Image
 import base64
 import io
@@ -17,14 +17,17 @@ MODEL_ID = "Qwen/Qwen-Image-Edit-2509"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 try:
-    pipe = AutoPipelineForImage2Image.from_pretrained(
+    pipe = QwenImageEditPlusPipeline.from_pretrained(
         MODEL_ID,
-        torch_dtype=torch.float16 if DEVICE == "cuda" else torch.float32,
+        torch_dtype=torch.bfloat16 if DEVICE == "cuda" else torch.float32,
     )
     pipe = pipe.to(DEVICE)
+    pipe.set_progress_bar_config(disable=True)
     print(f"✅ Qwen-Image-Edit chargé sur {DEVICE}")
 except Exception as e:
     print(f"❌ Erreur chargement modèle: {e}")
+    import traceback
+    traceback.print_exc()
     raise
 
 
@@ -89,16 +92,23 @@ def process_virtual_tryon(person_image, garment_image, prompt, strength=0.8, gui
         
         print(f"🎨 Génération avec Qwen-Image-Edit...")
         print(f"   Prompt: {prompt[:80]}...")
-        print(f"   Strength: {strength}, Guidance: {guidance_scale}")
         
-        # Générer avec Qwen-Image-Edit
-        result_img = pipe(
-            prompt=prompt,
-            image=person_img,
-            strength=strength,
-            guidance_scale=guidance_scale,
-            num_inference_steps=50,
-        ).images[0]
+        # Qwen-Image-Edit prend une liste d'images
+        inputs = {
+            "image": [person_img, garment_img],
+            "prompt": prompt,
+            "generator": torch.manual_seed(0),
+            "true_cfg_scale": 4.0,
+            "negative_prompt": "",
+            "num_inference_steps": 40,
+            "guidance_scale": 1.0,
+            "num_images_per_prompt": 1,
+        }
+        
+        with torch.inference_mode():
+            output = pipe(**inputs)
+        
+        result_img = output.images[0]
         
         print("✅ Génération terminée")
         result_base64 = encode_image_to_base64(result_img)
