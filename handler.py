@@ -1,18 +1,31 @@
 """
-Handler RunPod pour Virtual Try-On
-Version simplifiée pour test - Retourne l'image de la personne avec overlay du vêtement
+Handler RunPod pour Virtual Try-On avec Qwen-Image-Edit-2509
 """
 
 import runpod
-from PIL import Image, ImageDraw, ImageFont
+import torch
+from diffusers import AutoPipelineForImage2Image
+from PIL import Image
 import base64
 import io
 import os
 
-print("🚀 Initialisation du handler Virtual Try-On...")
+print("🚀 Chargement de Qwen-Image-Edit-2509...")
 
-# Handler prêt
-print("✅ Handler initialisé avec succès!")
+# Charger le modèle Qwen-Image-Edit
+MODEL_ID = "Qwen/Qwen-Image-Edit-2509"
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+try:
+    pipe = AutoPipelineForImage2Image.from_pretrained(
+        MODEL_ID,
+        torch_dtype=torch.float16 if DEVICE == "cuda" else torch.float32,
+    )
+    pipe = pipe.to(DEVICE)
+    print(f"✅ Qwen-Image-Edit chargé sur {DEVICE}")
+except Exception as e:
+    print(f"❌ Erreur chargement modèle: {e}")
+    raise
 
 
 def decode_base64_image(base64_string):
@@ -54,43 +67,48 @@ def encode_image_to_base64(image):
 
 def process_virtual_tryon(person_image, garment_image, prompt, strength=0.8, guidance_scale=7.5):
     """
-    Version simplifiée pour test - Composite simple des images
+    Traitement avec Qwen-Image-Edit-2509
     """
     try:
         print("📸 Décodage des images...")
         person_img = decode_base64_image(person_image)
         garment_img = decode_base64_image(garment_image)
         
-        print(f"🎨 Traitement avec prompt: {prompt[:50]}...")
+        # Convertir en RGB si nécessaire
+        if person_img.mode != 'RGB':
+            person_img = person_img.convert('RGB')
+        if garment_img.mode != 'RGB':
+            garment_img = garment_img.convert('RGB')
         
-        # Créer une image composite simple pour le test
-        result_img = person_img.copy()
+        # Redimensionner si trop grand (pour optimiser)
+        max_size = 1024
+        if max(person_img.size) > max_size:
+            ratio = max_size / max(person_img.size)
+            new_size = tuple(int(dim * ratio) for dim in person_img.size)
+            person_img = person_img.resize(new_size, Image.LANCZOS)
         
-        # Redimensionner le vêtement pour le placer sur l'image
-        garment_resized = garment_img.resize(
-            (person_img.width // 3, person_img.height // 3),
-            Image.LANCZOS
-        )
+        print(f"🎨 Génération avec Qwen-Image-Edit...")
+        print(f"   Prompt: {prompt[:80]}...")
+        print(f"   Strength: {strength}, Guidance: {guidance_scale}")
         
-        # Placer le vêtement en overlay semi-transparent
-        result_img.paste(
-            garment_resized,
-            (person_img.width // 3, person_img.height // 3),
-            garment_resized if garment_resized.mode == 'RGBA' else None
-        )
+        # Générer avec Qwen-Image-Edit
+        result_img = pipe(
+            prompt=prompt,
+            image=person_img,
+            strength=strength,
+            guidance_scale=guidance_scale,
+            num_inference_steps=50,
+        ).images[0]
         
-        # Ajouter un texte pour indiquer que c'est un test
-        draw = ImageDraw.Draw(result_img)
-        text = "TEST - Virtual Try-On Handler Active"
-        draw.text((10, 10), text, fill=(255, 255, 255))
-        
-        print("✅ Traitement terminé")
+        print("✅ Génération terminée")
         result_base64 = encode_image_to_base64(result_img)
         
-        return result_base64, f"Processed with prompt: {prompt}"
+        return result_base64, f"Generated with Qwen-Image-Edit: {prompt}"
     
     except Exception as e:
         print(f"❌ Erreur: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise
 
 

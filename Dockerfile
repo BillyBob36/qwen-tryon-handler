@@ -1,7 +1,7 @@
-# Dockerfile pour Virtual Try-On Handler sur RunPod
-# Version simplifiée et légère
+# Dockerfile pour Qwen-Image-Edit-2509 sur RunPod
+# Virtual Try-On avec IA
 
-FROM python:3.10-slim
+FROM runpod/pytorch:2.2.0-py3.10-cuda12.1.1-devel-ubuntu22.04
 
 # Définir les variables d'environnement
 ENV DEBIAN_FRONTEND=noninteractive
@@ -19,8 +19,13 @@ RUN apt-get update && apt-get install -y \
 # Installer les dépendances Python
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
+    torch>=2.0.0 \
+    diffusers>=0.25.0 \
+    transformers>=4.35.0 \
+    accelerate>=0.25.0 \
     pillow>=10.0.0 \
-    runpod>=1.6.0
+    runpod>=1.6.0 \
+    safetensors>=0.4.0
 
 # Créer le répertoire de travail
 WORKDIR /app
