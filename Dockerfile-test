@@ -1,0 +1,11 @@
+# Dockerfile de test simple
+FROM python:3.10-slim
+
+ENV PYTHONUNBUFFERED=1
+
+RUN pip install --no-cache-dir pillow runpod
+
+WORKDIR /app
+COPY handler-test.py /app/handler.py
+
+CMD ["python", "-u", "/app/handler.py"]

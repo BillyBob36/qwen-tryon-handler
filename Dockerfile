@@ -17,15 +17,18 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Installer les dépendances Python
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir \
-    torch>=2.0.0 \
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Installer les dépendances de base
+RUN pip install --no-cache-dir \
     transformers>=4.35.0 \
     accelerate>=0.25.0 \
     pillow>=10.0.0 \
     runpod>=1.6.0 \
-    safetensors>=0.4.0 && \
-    pip install --no-cache-dir git+https://github.com/huggingface/diffusers
+    safetensors>=0.4.0
+
+# Installer diffusers depuis GitHub (pour QwenImageEditPlusPipeline)
+RUN pip install --no-cache-dir git+https://github.com/huggingface/diffusers.git
 
 # Créer le répertoire de travail
 WORKDIR /app
